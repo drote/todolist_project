@@ -9,7 +9,8 @@ class Todo
   DONE_MARKER = 'X'
   UNDONE_MARKER = ' '
 
-  attr_accessor :title, :description, :done, :due_date
+  attr_accessor :title, :description, :done
+  attr_reader :due_date
 
   def initialize(title, description='')
     @title = title
@@ -21,18 +22,31 @@ class Todo
     self.done = true
   end
 
-  def done?
-    done
-  end
-
   def undone!
     self.done = false
+  end
+
+  def done?
+    done
   end
 
   def to_s
     str = "[#{done? ? DONE_MARKER : UNDONE_MARKER}] #{title}"
     str += due_date.stamp(' (Due: Friday January 6)') if due_date
     str
+  end
+
+  def due_date=(date)
+    raise TypeError unless date.instance_of?(Date)
+    raise ArgumentError if (Date.today <=> date) == 1
+
+    @due_date = date
+  end
+
+  def ==(other_do)
+    title == other_do.title &&
+    due_date == other_do.due_date &&
+    done? == other_do.done?
   end
 end
 

@@ -1,3 +1,6 @@
+require 'simplecov'
+SimpleCov.start
+
 require 'bundler/setup'
 require 'minitest/autorun'
 require 'minitest/reporters'
@@ -21,12 +24,105 @@ class TodoListTest < MiniTest::Test
     @list.add(@todo3)
   end
 
+  def test_item_change_title
+    @todo1.title = 'Buy milk and cheese'
+    expected = 'Buy milk and cheese'
+    assert_equal(expected, @todo1.title)
+  end
+
+  def test_item_empty_description
+    assert_equal('', @todo1.description)
+  end
+
+  def test_item_description_assignment
+    @todo1.description = 'Buy whole milk from Safeway on 1st' 
+    expected = 'Buy whole milk from Safeway on 1st'
+    assert_equal(expected, @todo1.description)
+  end
+
+  def test_item_done_defaults_to_false
+    assert_equal(false, @todo1.done)
+  end
+
+  def test_item_due_date_defaults_to_empty
+    assert_nil(@todo1.due_date)
+  end
+
+  def test_due_date
+    due_date = Date.today + 3
+    @todo2.due_date = due_date
+    assert_equal(due_date, @todo2.due_date)
+  end
+
+  def test_raises_type_error_unless_date
+    assert_raises(TypeError) { @todo1.due_date = '1/2/2012' }
+  end
+
+  def test_raises_argument_error_if_date_passed
+    assert_raises(ArgumentError) { @todo1.due_date = Date.new(2017, 05, 03) }
+  end
+
+  def test_no_error_if_date_today
+    @todo1.due_date = Date.today
+    assert_equal(Date.today, @todo1.due_date)
+  end
+
+  def test_item_done
+    @todo1.done!
+    assert_equal(true, @todo1.done)
+  end
+
+  def test_item_undone!
+    @todo1.done!
+    assert_equal(true, @todo1.done)
+    @todo1.undone!
+    assert_equal(false, @todo1.done)
+  end
+
+  def test_item_done?
+    assert_equal(false, @todo1.done?)
+    @todo1.done!
+    assert_equal(true, @todo1.done?)
+  end
+
+  def test_item_to_s_undone
+    expected_str = '[ ] Buy milk'
+    assert_equal(expected_str, @todo1.to_s)
+  end
+
+  def test_item_to_s_done
+    expected_str = '[X] Buy milk'
+    @todo1.done!
+    assert_equal(expected_str, @todo1.to_s)
+  end
+
+  def test_item_to_s_with_due_date_undone
+    @todo1.due_date = Date.new(2099, 4, 15)
+    expected_str = '[ ] Buy milk (Due: Wednesday April 15)'
+    assert_equal(expected_str, @todo1.to_s)
+  end
+
+  def test_item_to_s_with_due_date_done
+    @todo1.due_date = Date.new(2099, 4, 15)
+    expected_str = '[X] Buy milk (Due: Wednesday April 15)'
+    @todo1.done!
+    assert_equal(expected_str, @todo1.to_s)
+  end
+
+  def test_title
+    expected = "Today's Todos"
+    assert_equal(expected, @list.title)
+  end
+
   def test_to_a
     assert_equal(@todos, @list.to_a)
   end
 
-  def test_add_raise_error
+  def test_add_raise_error_integer
     assert_raises(TypeError) { @list.add(1) }
+  end
+
+  def test_add_raise_error_string
     assert_raises(TypeError) { @list.add('hi') }
   end
 
@@ -70,6 +166,44 @@ class TodoListTest < MiniTest::Test
     assert_raises(IndexError) { @list.item_at(100) }
     assert_equal(@todo1, @list.item_at(0))
     assert_equal(@todo2, @list.item_at(1))
+  end
+
+  def test_find_by_title
+    todo = @list.find_by_title('Buy milk')
+    assert_equal(@todo1, todo)
+  end
+
+  def test_all_done
+    @todo1.done!
+    @todo3.done!
+    assert_equal([@todo1, @todo3], @list.all_done.to_a)
+  end
+
+  def test_all_not_done
+    @todo2.done!
+    assert_equal([@todo1, @todo3], @list.all_not_done.to_a)
+  end
+
+  def test_mark_done_by_title
+    @list.mark_done('Go to gym')
+    assert_equal(true, @todo3.done?)
+  end
+
+  def test_mark_all_done
+    @list.mark_all_done
+    assert_equal(true, @todo1.done?)
+    assert_equal(true, @todo2.done?)
+    assert_equal(true, @todo3.done?)
+    assert_equal(true, @list.done?)
+  end
+
+  def test_mark_all_undone
+    @list.mark_all_done
+    @list.mark_all_undone
+    assert_equal(false, @todo1.done?)
+    assert_equal(false, @todo2.done?)
+    assert_equal(false, @todo3.done?)
+    assert_equal(false, @list.done?)
   end
 
   def test_mark_done_at
@@ -161,22 +295,12 @@ class TodoListTest < MiniTest::Test
     assert_equal(list.to_s, @list.select{ |todo| todo.done? }.to_s)
   end
 
-  def test_no_due_date
-    assert_nil(@todo1.due_date)
-  end
-
-  def test_due_date
-    due_date = Date.today + 3
-    @todo2.due_date = due_date
-    assert_equal(due_date, @todo2.due_date)
-  end
-
   def test_to_s_with_due_date
-    @todo2.due_date = Date.new(2017, 4, 15)
+    @todo2.due_date = Date.new(2099, 4, 15)
     output = <<-OUTPUT.chomp.gsub(/^\s+/,'')
     ---- Today's Todos ----
     [ ] Buy milk
-    [ ] Clean room (Due: Saturday April 15)
+    [ ] Clean room (Due: Wednesday April 15)
     [ ] Go to gym
     OUTPUT
 
